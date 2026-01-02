@@ -19,13 +19,15 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
         models.Question.quiz_id == quiz_id
     ).all()
 
-    return QuizInDB(
+    return QuizPublic(
         id=db_quiz.id,
         title=db_quiz.title,
         questions=[
             {
                 "id": str(q.id),
                 "text": q.question_text,
+                "multiple_choice": q.multiple_choice,
+                "points": q.points, 
                 "options": [
                     {
                         "id": opt["id"],
