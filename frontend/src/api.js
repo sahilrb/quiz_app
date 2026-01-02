@@ -1,5 +1,5 @@
 import axios from 'axios';
-const API_URL = process.env.REACT_APP_API_URL;
+const API_URL = process.env.APP_API_URL;
 
 export const createQuiz = async (quizData) => {
     const response = await axios.post(`${API_URL}/quiz`, quizData, {
