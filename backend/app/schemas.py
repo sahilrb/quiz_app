@@ -1,13 +1,14 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field, root_validator, validator
 
 class OptionCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=500)
     is_correct: bool
-    
+
 
 class QuestionCreate(BaseModel):
+    type: Literal["single_choice", "text"]
     text: str = Field(..., min_length=1, max_length=1000)
     options: List[OptionCreate] = Field(..., min_items=2, max_items=50)
     multiple_choice: bool = Field(False, description="True if multiple options can be selected")
