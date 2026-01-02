@@ -21,7 +21,7 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
 
     # Convert db_quiz to QuizInDB schema
     quiz_data = QuizInDB(
-        id=db_quiz.id,
+        id=quiz_id,
         title=db_quiz.title,
         questions=[
             {
