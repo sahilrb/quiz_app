@@ -4,7 +4,8 @@ from pydantic import BaseModel, Field, root_validator, validator
 
 class OptionCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=500)
-
+    is_correct: bool
+    
 
 class QuestionCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000)
