@@ -90,7 +90,6 @@ class QuestionInDB(BaseModel):
 class QuizInDB(BaseModel):
     id: UUID
     title: str
-    description: Optional[str]
     questions: List[QuestionInDB]
     published: bool = Field(False)
 
