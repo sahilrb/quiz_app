@@ -26,7 +26,6 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
             {
                 "id": str(q.id),
                 "text": q.question_text,
-                "multiple_choice": q.multiple_choice,
                 "points": q.points, 
                 "options": [
                     {
