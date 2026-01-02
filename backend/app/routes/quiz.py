@@ -15,31 +15,29 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
     if not db_quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    # Fetch questions for the quiz
-    questions = db.query(models.Question).filter(models.Question.quiz_id == quiz_id).all()
-    db_quiz.questions = questions
+    questions = db.query(models.Question).filter(
+        models.Question.quiz_id == quiz_id
+    ).all()
 
-    # Convert db_quiz to QuizInDB schema
-    quiz_data = QuizInDB(
-        id=quiz_id,
+    return QuizInDB(
+        id=db_quiz.id,
         title=db_quiz.title,
         questions=[
             {
-                "id": str(question.id),
-                "text": question.question_text,
+                "id": str(q.id),
+                "text": q.question_text,
                 "options": [
                     {
-                        "id": str(option.id),
-                        "text": option.text,
-                        "is_correct": option.is_correct
+                        "id": opt["id"],
+                        "text": opt["text"]
                     }
-                    for option in db.query(models.Option).filter(models.Option.question_id == question.id).all()
+                    for opt in (q.options or [])
                 ]
             }
-            for question in questions
-        ],
+            for q in questions
+        ]
     )
-    return quiz_data
+
 
 # Submit Quiz Answers
 @router.post("/quiz/{quiz_id}/submit")
