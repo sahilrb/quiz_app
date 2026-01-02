@@ -26,7 +26,7 @@ class QuizCreate(BaseModel):
     questions: List[QuestionCreate] = Field(..., min_items=1)
     published: bool = Field(False)
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def validate_questions_points(cls, values):
         questions = values.get("questions") or []
         if not questions:
