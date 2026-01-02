@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { getQuiz } from "../api";
 
-// /Users/sahilbhingradiya/Documents/Work/Tecnique Assessment/quiz_app/frontend/src/pages/Quiz.jsx
-
 export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
     const params = useParams();
     const quizId = propQuizId || params.quizId || "1";
