@@ -23,7 +23,6 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
     quiz_data = QuizInDB(
         id=db_quiz.id,
         title=db_quiz.title,
-        description=db_quiz.description,  # Add description if available
         questions=[
             {
                 "id": str(question.id),
