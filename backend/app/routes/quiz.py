@@ -14,13 +14,31 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
     db_quiz = db.query(models.Quiz).filter(models.Quiz.id == quiz_id).first()
     if not db_quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    
+
+    # Fetch questions for the quiz
+    questions = db.query(models.Question).filter(models.Question.quiz_id == quiz_id).all()
+    db_quiz.questions = questions
+
     # Convert db_quiz to QuizInDB schema
     quiz_data = QuizInDB(
         id=db_quiz.id,
         title=db_quiz.title,
-        description=None,  # Add description if available
-        questions=[],      # Fetch and add questions if available
+        description=db_quiz.description,  # Add description if available
+        questions=[
+            {
+                "id": str(question.id),
+                "text": question.text,
+                "options": [
+                    {
+                        "id": str(option.id),
+                        "text": option.text,
+                        "is_correct": option.is_correct
+                    }
+                    for option in db.query(models.Option).filter(models.Option.question_id == question.id).all()
+                ]
+            }
+            for question in questions
+        ],
     )
     return quiz_data
 

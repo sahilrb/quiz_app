@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { createQuiz } from "../api";
 
 /**
  * AdminQuizForm.jsx
@@ -12,6 +13,15 @@ import React, { useState, useMemo } from "react";
  */
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+// small RFC4122 v4 UUID generator for browsers that lack crypto.randomUUID
+const uuidv4 = () => {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+};
 
 export default function AdminQuizForm({ initialQuiz = null, onSubmit = null }) {
     const [title, setTitle] = useState(initialQuiz?.title || "");
@@ -97,18 +107,8 @@ export default function AdminQuizForm({ initialQuiz = null, onSubmit = null }) {
     }, [title, questions]);
 
     const defaultSubmit = async (quiz) => {
-        const url = isEdit ? `/api/quizzes/${initialQuiz.id}` : "/api/quizzes";
-        const method = isEdit ? "PUT" : "POST";
-        const res = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(quiz),
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(text || `Request failed with status ${res.status}`);
-        }
-        return res.json();
+        console.log("Submitting quiz:", quiz);
+        return createQuiz(quiz);
     };
 
     const handleSubmit = async (e) => {
@@ -118,16 +118,31 @@ export default function AdminQuizForm({ initialQuiz = null, onSubmit = null }) {
             setError(validate);
             return;
         }
+        // Build payload matching backend `QuizInDB` schema:
+        // - quiz id must be a valid UUID
+        // - questions[].id must be UUID
+        // - questions[].options must be array of { id, text, is_correct }
+        const quizId = initialQuiz?.id || uuidv4();
         const payload = {
-            id: initialQuiz?.id,
+            id: quizId,
             title: title.trim(),
             description: description.trim(),
-            questions: questions.map((q) => ({
-                id: q.id,
-                text: q.text.trim(),
-                options: q.options.map((o) => o.trim()),
-                correctIndex: q.correctIndex,
-            })),
+            published: false,
+            questions: questions.map((q) => {
+                const qid = q.id && q.id.length === 36 ? q.id : uuidv4();
+                const opts = q.options.map((optText, oi) => ({
+                    id: uuidv4(),
+                    text: optText.trim(),
+                    is_correct: oi === q.correctIndex,
+                }));
+                return {
+                    id: qid,
+                    text: q.text.trim(),
+                    options: opts,
+                    multiple_choice: false,
+                    points: 1,
+                };
+            }),
         };
         setSubmitting(true);
         try {
