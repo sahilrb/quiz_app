@@ -1,6 +1,12 @@
 from typing import List, Optional, Literal
 from uuid import UUID
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import (
+    BaseModel,
+    Field,
+    validator,
+    model_validator,
+)
+
 
 class OptionCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=500)
@@ -21,14 +27,11 @@ class QuestionCreate(BaseModel):
             raise ValueError("option texts must be unique within a question")
         return options
 
-    @root_validator
-    def validate_correct_options(cls, values):
-        options = values.get("options", [])
-        multiple = values.get("multiple_choice", False)
+    @model_validator(mode="after")
+    def validate_correct_options(self):
+        correct_count = sum(1 for o in self.options if o.is_correct)
 
-        correct_count = sum(1 for o in options if o.is_correct)
-
-        if multiple:
+        if self.multiple_choice:
             if correct_count < 1:
                 raise ValueError(
                     "multiple choice question must have at least one correct option"
@@ -39,7 +42,7 @@ class QuestionCreate(BaseModel):
                     "single-choice question must have exactly one correct option"
                 )
 
-        return values
+        return self
 
 
 class QuizCreate(BaseModel):
@@ -48,11 +51,11 @@ class QuizCreate(BaseModel):
     questions: List[QuestionCreate] = Field(..., min_items=1)
     published: bool = False
 
-    @root_validator
-    def validate_questions_exist(cls, values):
-        if not values.get("questions"):
+    @model_validator(mode="after")
+    def validate_questions_exist(self):
+        if not self.questions:
             raise ValueError("quiz must contain at least one question")
-        return values
+        return self
 
 
 
@@ -104,15 +107,16 @@ class QuizInDB(BaseModel):
 
 
 
+
 class AnswerSubmission(BaseModel):
     question_id: UUID
     selected_option_ids: List[UUID] = Field(..., min_items=1)
 
     @validator("selected_option_ids")
-    def unique_selected_options(cls, v):
-        if len(set(v)) != len(v):
+    def unique_selected_options(cls, values):
+        if len(set(values)) != len(values):
             raise ValueError("selected_option_ids must be unique")
-        return v
+        return values
 
 
 class QuizSubmission(BaseModel):
@@ -120,11 +124,12 @@ class QuizSubmission(BaseModel):
     answers: List[AnswerSubmission] = Field(..., min_items=1)
 
     @validator("answers")
-    def unique_questions(cls, v):
-        qids = [a.question_id for a in v]
+    def unique_questions(cls, answers):
+        qids = [a.question_id for a in answers]
         if len(set(qids)) != len(qids):
             raise ValueError("each question may be answered only once")
-        return v
+        return answers
+
 
 
 
