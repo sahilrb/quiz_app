@@ -1,5 +1,5 @@
 import axios from 'axios';
-const API_URL = 'https://sahilrb-sample-react-app-demo.vercel.app';
+const API_URL = 'https://quiz-app-gudj.onrender.com';
 
 export const createQuiz = async (quizData) => {
     const response = await axios.post(`${API_URL}/quiz`, quizData, {
