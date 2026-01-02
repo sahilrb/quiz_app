@@ -19,6 +19,6 @@ export const getQuiz = async (id) => {
 
 // submitQuiz
 export const submitQuiz = async (quizId, answers) => {
-    const response = await axios.post(`${API_URL}/quiz/${quizId}/submit/`, { answers });
+    const response = await axios.post(`${API_URL}/quiz/${quizId}/submit/`, answers );
     return response.data;
 };

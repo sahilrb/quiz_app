@@ -60,7 +60,7 @@ export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
                 })),
             };
 
-            const result = await submitQuiz(quizId, payload);
+            const result = await submitQuiz(quizId, JSON.stringify(payload));
 
             setResult(result);
             if (onSubmitSuccess) onSubmitSuccess(result);
@@ -79,9 +79,9 @@ export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
         return (
             <ResultView
                 score={result.score}
-                total={result.max_score}
+                total={result.total}
                 details={
-                    result.per_question?.map((pq, idx) => ({
+                    result.questions?.map((pq, idx) => ({
                         question: quiz.questions[idx]?.text,
                         correct: pq.correct,
                     })) || []
