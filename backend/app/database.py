@@ -16,3 +16,11 @@ Base = declarative_base()
 # Optional helper to create tables from models
 def init_db():
     Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+    
