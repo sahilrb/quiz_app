@@ -11,92 +11,99 @@ class QuestionCreate(BaseModel):
     type: Literal["single_choice", "text"]
     text: str = Field(..., min_length=1, max_length=1000)
     options: List[OptionCreate] = Field(..., min_items=2, max_items=50)
-    multiple_choice: bool = Field(False, description="True if multiple options can be selected")
+    multiple_choice: bool = False
     points: int = Field(1, ge=0)
 
     @validator("options")
-    def unique_option_texts(cls, v):
-        texts = [o.text.strip() for o in v]
+    def unique_option_texts(cls, options):
+        texts = [o.text.strip() for o in options]
         if len(set(texts)) != len(texts):
             raise ValueError("option texts must be unique within a question")
-        return v
+        return options
+
+    @root_validator
+    def validate_correct_options(cls, values):
+        options = values.get("options", [])
+        multiple = values.get("multiple_choice", False)
+
+        correct_count = sum(1 for o in options if o.is_correct)
+
+        if multiple:
+            if correct_count < 1:
+                raise ValueError(
+                    "multiple choice question must have at least one correct option"
+                )
+        else:
+            if correct_count != 1:
+                raise ValueError(
+                    "single-choice question must have exactly one correct option"
+                )
+
+        return values
 
 
 class QuizCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=300)
     description: Optional[str] = Field(None, max_length=2000)
     questions: List[QuestionCreate] = Field(..., min_items=1)
-    published: bool = Field(False)
+    published: bool = False
 
-    @root_validator(skip_on_failure=True)
-    def validate_questions_points(cls, values):
-        questions = values.get("questions") or []
-        if not questions:
+    @root_validator
+    def validate_questions_exist(cls, values):
+        if not values.get("questions"):
             raise ValueError("quiz must contain at least one question")
         return values
 
 
-# Public-facing schemas (do NOT include correct answers)
+
+
 class OptionPublic(BaseModel):
     id: UUID
-    text: str = Field(..., min_length=1, max_length=500)
+    text: str
 
 
 class QuestionPublic(BaseModel):
     id: UUID
-    text: str = Field(..., min_length=1, max_length=1000)
-    options: List[OptionPublic] = Field(..., min_items=2)
-    multiple_choice: bool = Field(False)
-    points: int = Field(1, ge=0)
+    text: str
+    options: List[OptionPublic]
+    multiple_choice: bool = False
+    points: int = 1
 
 
 class QuizPublic(BaseModel):
     id: UUID
-    title: str = Field(..., min_length=1, max_length=300)
-    description: Optional[str] = Field(None, max_length=2000)
-    questions: List[QuestionPublic] = Field(..., min_items=1)
+    title: str
+    description: Optional[str]
+    questions: List[QuestionPublic]
 
     @property
     def total_points(self) -> int:
         return sum(q.points for q in self.questions)
 
 
-# Internal schema used when creating/storing question options including correct flags
+
 class OptionInDB(BaseModel):
     id: UUID
-    text: str = Field(..., min_length=1, max_length=500)
-    is_correct: bool = Field(False)
+    text: str
+    is_correct: bool
 
 
 class QuestionInDB(BaseModel):
     id: UUID
-    text: str = Field(..., min_length=1, max_length=1000)
-    options: List[OptionInDB] = Field(..., min_items=2)
-    multiple_choice: bool = Field(False)
-    points: int = Field(1, ge=0)
-
-    @validator("options")
-    def ensure_at_least_one_correct_for_question(cls, v, values):
-        # For multiple_choice allow >=1 correct; for single choice require exactly 1 correct
-        multiple = values.get("multiple_choice", False)
-        correct_count = sum(1 for o in v if o.is_correct)
-        if multiple:
-            if correct_count < 1:
-                raise ValueError("multiple choice question must have at least one correct option")
-        else:
-            if correct_count != 1:
-                raise ValueError("single-choice question must have exactly one correct option")
-        return v
+    text: str
+    options: List[OptionInDB]
+    multiple_choice: bool = False
+    points: int = 1
 
 
 class QuizInDB(BaseModel):
     id: UUID
     title: str
     questions: List[QuestionInDB]
-    published: bool = Field(False)
+    published: bool = False
 
 
-# Submission schemas
+
 class AnswerSubmission(BaseModel):
     question_id: UUID
     selected_option_ids: List[UUID] = Field(..., min_items=1)
@@ -116,11 +123,11 @@ class QuizSubmission(BaseModel):
     def unique_questions(cls, v):
         qids = [a.question_id for a in v]
         if len(set(qids)) != len(qids):
-            raise ValueError("each question may be answered only once in a submission")
+            raise ValueError("each question may be answered only once")
         return v
 
 
-# Result / feedback schemas
+
 class QuestionResult(BaseModel):
     question_id: UUID
     correct: bool
@@ -133,4 +140,4 @@ class QuizSubmissionResult(BaseModel):
     quiz_id: UUID
     total_score: int = Field(ge=0)
     max_score: int = Field(ge=0)
-    per_question: List[QuestionResult] = Field(...)
+    per_question: List[QuestionResult]

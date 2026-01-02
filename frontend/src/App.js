@@ -6,6 +6,7 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Admin />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/quiz/:quizId" element={<Quiz />} />
       </Routes>
