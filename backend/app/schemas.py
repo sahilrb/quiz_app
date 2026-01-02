@@ -68,10 +68,8 @@ class OptionPublic(BaseModel):
 class QuestionPublic(BaseModel):
     id: UUID
     text: str
+    type: str
     options: List[OptionPublic]
-    multiple_choice: bool = False
-    points: int = 1
-
 
 class QuizPublic(BaseModel):
     id: UUID
