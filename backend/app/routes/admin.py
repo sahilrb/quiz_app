@@ -30,7 +30,7 @@ async def create_quiz(quiz: QuizCreate, db: Session = Depends(get_db)):
         correct_answer = None
 
         for opt in q.options:
-            opt_id = uuid.uuid4()
+            opt_id = str(uuid.uuid4()) 
             options.append({
                 "id": opt_id,        
                 "text": opt.text,

@@ -124,14 +124,12 @@ export default function AdminQuizForm({ initialQuiz = null, onSubmit = null }) {
         // - questions[].options must be array of { id, text, is_correct }
         const quizId = initialQuiz?.id || uuidv4();
         const payload = {
-            id: quizId,
+            // id: quizId,
             title: title.trim(),
-            description: description.trim(),
-            published: false,
             questions: questions.map((q) => {
                 const qid = q.id && q.id.length === 36 ? q.id : uuidv4();
                 const opts = q.options.map((optText, oi) => ({
-                    id: uuidv4(),
+                    // id: uuidv4(),
                     text: optText.trim(),
                     is_correct: oi === q.correctIndex,
                 }));
@@ -139,8 +137,9 @@ export default function AdminQuizForm({ initialQuiz = null, onSubmit = null }) {
                     id: qid,
                     text: q.text.trim(),
                     options: opts,
-                    multiple_choice: false,
-                    points: 1,
+                    type: "single_choice",
+                    // multiple_choice: false,
+                    // points: 1,
                 };
             }),
         };
