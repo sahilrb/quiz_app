@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { getQuiz } from "../api";
+import { getQuiz, submitQuiz } from "../api";
+import QuizRenderer from "../components/QuizRenderer";
+import ResultView from "../components/ResultView";
 
 export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
     const params = useParams();
@@ -45,42 +47,23 @@ export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
     async function handleSubmit(e) {
         e.preventDefault();
         if (!quiz) return;
+
         setSubmitting(true);
-        setResult(null);
+        setError(null);
 
-        // If quiz includes correct answers, score locally
-        const hasCorrect =
-            Array.isArray(quiz.questions) &&
-            quiz.questions.every((q) => q.hasOwnProperty("correctIndex") || q.hasOwnProperty("correctId"));
-
-        if (hasCorrect) {
-            let score = 0;
-            quiz.questions.forEach((q) => {
-                const given = answers[q.id];
-                if (q.hasOwnProperty("correctIndex")) {
-                    if (given === q.correctIndex) score++;
-                } else if (q.hasOwnProperty("correctId")) {
-                    if (given === q.correctId) score++;
-                }
-            });
-            setResult({ type: "local", score, total: quiz.questions.length });
-            setSubmitting(false);
-            if (onSubmitSuccess) onSubmitSuccess({ score, total: quiz.questions.length });
-            return;
-        }
-
-        // Otherwise post answers to backend for scoring
         try {
-            const data = getQuiz(quizId).then((quizData) => {
-                return {
-                    quiz: quizData,
-                    answers: answers,
-                };
-            }
-            );
+            const payload = {
+                quiz_id: quizId,
+                answers: Object.entries(answers).map(([questionId, optionId]) => ({
+                question_id: questionId,
+                selected_option_ids: [optionId],
+                })),
+            };
 
-            setResult({ type: "server", payload: data });
-            if (onSubmitSuccess) onSubmitSuccess(data);
+            const result = await submitQuiz(quizId, payload);
+
+            setResult(result);
+            if (onSubmitSuccess) onSubmitSuccess(result);
         } catch (err) {
             setError(err.message || "Submit error");
         } finally {
@@ -92,13 +75,33 @@ export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
     if (error) return <div style={{ color: "red" }}>Error: {error}</div>;
     if (!quiz) return <div>No quiz found.</div>;
 
+    if (result) {
+        return (
+            <ResultView
+                score={result.score}
+                total={result.max_score}
+                details={
+                    result.per_question?.map((pq, idx) => ({
+                        question: quiz.questions[idx]?.text,
+                        correct: pq.correct,
+                    })) || []
+                }
+                onRetake={() => {
+                    setAnswers({});
+                    setResult(null);
+                }}
+                onClose={() => setResult(null)}
+            />
+        );
+    }
+
     return (
         <div style={{ maxWidth: 800, margin: "0 auto", padding: 16 }}>
             <h1>{quiz.title || "Quiz"}</h1>
             {quiz.description && <p>{quiz.description}</p>}
 
             <form onSubmit={handleSubmit}>
-                {Array.isArray(quiz.questions) && quiz.questions.length > 0 ? (
+                {/* {Array.isArray(quiz.questions) && quiz.questions.length > 0 ? (
                     quiz.questions.map((q, qi) => {
                         const qKey = q.id ?? qi;
                         const choices = Array.isArray(q.choices) ? q.choices : [];
@@ -141,8 +144,12 @@ export default function Quiz({ quizId: propQuizId, onSubmitSuccess }) {
                     })
                 ) : (
                     <div>No questions in this quiz.</div>
-                )}
-
+                )} */}
+                <QuizRenderer
+                    questions={quiz.questions}
+                    answers={answers}
+                    onChange={handleSelect}
+                />
                 <div style={{ marginTop: 12 }}>
                     <button type="submit" disabled={submitting}>
                         {submitting ? "Submitting..." : "Submit"}

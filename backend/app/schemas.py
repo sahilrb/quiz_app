@@ -1,11 +1,7 @@
 from typing import List, Optional, Literal
 from uuid import UUID
-from pydantic import (
-    BaseModel,
-    Field,
-    validator,
-    model_validator,
-)
+from pydantic import BaseModel, Field, validator, model_validator
+
 
 
 class OptionCreate(BaseModel):
@@ -17,8 +13,6 @@ class QuestionCreate(BaseModel):
     type: Literal["single_choice", "text"]
     text: str = Field(..., min_length=1, max_length=1000)
     options: List[OptionCreate] = Field(..., min_items=2, max_items=50)
-    multiple_choice: bool = False
-    points: int = Field(1, ge=0)
 
     @validator("options")
     def unique_option_texts(cls, options):
@@ -30,18 +24,8 @@ class QuestionCreate(BaseModel):
     @model_validator(mode="after")
     def validate_correct_options(self):
         correct_count = sum(1 for o in self.options if o.is_correct)
-
-        if self.multiple_choice:
-            if correct_count < 1:
-                raise ValueError(
-                    "multiple choice question must have at least one correct option"
-                )
-        else:
-            if correct_count != 1:
-                raise ValueError(
-                    "single-choice question must have exactly one correct option"
-                )
-
+        if correct_count != 1:
+            raise ValueError("single-choice question must have exactly one correct option")
         return self
 
 
@@ -50,14 +34,6 @@ class QuizCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     questions: List[QuestionCreate] = Field(..., min_items=1)
     published: bool = False
-
-    @model_validator(mode="after")
-    def validate_questions_exist(self):
-        if not self.questions:
-            raise ValueError("quiz must contain at least one question")
-        return self
-
-
 
 
 class OptionPublic(BaseModel):
@@ -71,6 +47,7 @@ class QuestionPublic(BaseModel):
     type: str
     options: List[OptionPublic]
 
+
 class QuizPublic(BaseModel):
     id: UUID
     title: str
@@ -82,7 +59,6 @@ class QuizPublic(BaseModel):
         return sum(q.points for q in self.questions)
 
 
-
 class OptionInDB(BaseModel):
     id: UUID
     text: str
@@ -91,10 +67,10 @@ class OptionInDB(BaseModel):
 
 class QuestionInDB(BaseModel):
     id: UUID
-    text: str
+    question_text: str
+    type: str
     options: List[OptionInDB]
-    multiple_choice: bool = False
-    points: int = 1
+    correct_ans: UUID
 
 
 class QuizInDB(BaseModel):
@@ -130,13 +106,10 @@ class QuizSubmission(BaseModel):
 
 
 
-
 class QuestionResult(BaseModel):
     question_id: UUID
     correct: bool
-    earned_points: int = Field(ge=0)
-    max_points: int = Field(ge=0)
-    correct_option_ids: Optional[List[UUID]] = None
+    correct_option_ids: Optional[List[UUID]]
 
 
 class QuizSubmissionResult(BaseModel):

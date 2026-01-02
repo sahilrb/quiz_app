@@ -1,8 +1,8 @@
 import uuid
-from uuid import UUID as UUIDType
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..schemas import QuizInDB, QuizPublic, QuizSubmissionResult
+from ..schemas import QuestionResult, QuizInDB, QuizPublic, QuizSubmission, QuizSubmissionResult
 from ..database import get_db
 from .. import models
 
@@ -41,36 +41,55 @@ async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
 
 
 # Submit Quiz Answers
-@router.post("/quiz/{quiz_id}/submit")
-async def submit_quiz(quiz_id: str, answers: dict, db: Session = Depends(get_db)):
-    # Logic to submit quiz answers goes here
+@router.post("/quiz/{quiz_id}/submit", response_model=QuizSubmissionResult)
+async def submit_quiz(
+    quiz_id: UUID,
+    submission: QuizSubmission,
+    db: Session = Depends(get_db),
+):
     quiz = db.query(models.Quiz).filter(models.Quiz.id == quiz_id).first()
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    # Process answers and calculate score
-    score = 0
 
-    # Iterate through the answers and calculate the score
-    for question_id, answer in answers.items():
-        question = db.query(models.Question).filter(models.Question.id == question_id).first()
+    score = 0
+    per_question = []
+
+    for answer in submission.answers:
+        question = (
+            db.query(models.Question)
+            .filter(models.Question.id == answer.question_id)
+            .first()
+        )
         if not question:
             continue
-        if answer == question.correct_answer:
+
+        correct_option_id = UUID(question.correct_ans)
+
+        is_correct = correct_option_id in answer.selected_option_ids
+
+        if is_correct:
             score += 1
 
-    # Save submission to database
-    submission = models.Submission(
-        id=uuid.uuid4(),
+        per_question.append(
+            QuestionResult(
+                question_id=answer.question_id,
+                correct=is_correct,
+                correct_option_ids=[correct_option_id],
+            )
+        )
+
+    db_submission = models.Submission(
         quiz_id=quiz_id,
-        score=score
+        answers=[a.dict() for a in submission.answers],
+        score=score,
     )
-    db.add(submission)
+
+    db.add(db_submission)
     db.commit()
 
-    result = QuizSubmissionResult(
-        quiz_id=UUIDType(str(quiz_id)),
+    return QuizSubmissionResult(
+        quiz_id=quiz_id,
         total_score=score,
-        max_score=len(answers),
-        per_question=[],
+        max_score=len(submission.answers),
+        per_question=per_question,
     )
-    return result
