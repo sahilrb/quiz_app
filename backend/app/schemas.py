@@ -76,7 +76,7 @@ class QuestionPublic(BaseModel):
 class QuizPublic(BaseModel):
     id: UUID
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     questions: List[QuestionPublic]
 
     @property

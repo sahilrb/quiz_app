@@ -2,14 +2,14 @@ import uuid
 from uuid import UUID as UUIDType
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..schemas import QuizInDB, QuizSubmissionResult
+from ..schemas import QuizInDB, QuizPublic, QuizSubmissionResult
 from ..database import get_db
 from .. import models
 
 router = APIRouter()
 
 # GET /quiz/{quiz_id}
-@router.get("/quiz/{quiz_id}", response_model=QuizInDB)
+@router.get("/quiz/{quiz_id}", response_model=QuizPublic)
 async def get_quiz(quiz_id: str, db: Session = Depends(get_db)):
     db_quiz = db.query(models.Quiz).filter(models.Quiz.id == quiz_id).first()
     if not db_quiz:
